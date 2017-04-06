@@ -1,15 +1,11 @@
 # BaiduImageSpider
-百度图片爬虫，基于python3
+ref1:
+https://github.com/xzblueofsky/BaiduImageSpider
 
-个人学习开发用
+ref2:
+http://lovenight.github.io/2015/11/15/Python-3-%E5%A4%9A%E7%BA%BF%E7%A8%8B%E4%B8%8B%E8%BD%BD%E7%99%BE%E5%BA%A6%E5%9B%BE%E7%89%87%E6%90%9C%E7%B4%A2%E7%BB%93%E6%9E%9C/
 
-提高了爬虫的容错率、稳定性
-
-单线程爬取百度图片结果
-
-在`index.py`最后一行修改编辑查找关键字
-图片默认保存在项目路径
 运行爬虫：
 ``` python
-python index.py
+python haha.py
 ```
