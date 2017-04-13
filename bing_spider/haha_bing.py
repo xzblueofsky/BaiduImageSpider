@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+
+# -*- coding: utf-8 -*-
+# @Author: loveNight
+# @Date:   2015-10-28 19:59:24
+# @Last Modified by:   loveNight
+# @Last Modified time: 2015-11-15 19:24:57
+
+
+import urllib
+import requests
+import os
+import re
+import sys
+import time
+import threading
+from datetime import datetime as dt
+from multiprocessing.dummy import Pool
+from multiprocessing import Queue
+
+
+class BingImgDownloader(object):
+
+    """Bing图片下载工具，目前只支持单个关键词"""
+
+    re_objURL = re.compile(r'http:[\w\/\.\-]*\.jpg') 
+    re_downNum = re.compile(r"已下载\s(\d+)\s张图片")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36",
+        "Accept-Encoding": "gzip, deflate, sdch",
+    }
+
+    def __init__(self, word, dirpath=None, processNum=30):
+        if " " in word:
+            raise AttributeError("本脚本仅支持单个关键字")
+        self.word = word
+        if not dirpath:
+            dirpath = os.path.join(sys.path[0], 'results')
+        self.dirpath = dirpath
+        self.jsonUrlFile = os.path.join(sys.path[0], 'jsonUrl.txt')
+        self.logFile = os.path.join(sys.path[0], 'logInfo.txt')
+        self.errorFile = os.path.join(sys.path[0], 'errorUrl.txt')
+        if os.path.exists(self.errorFile):
+            os.remove(self.errorFile)
+        if not os.path.exists(self.dirpath):
+            os.mkdir(self.dirpath)
+        self.pool = Pool(30)
+        self.session = requests.Session()
+        self.session.headers = BingImgDownloader.headers
+        self.queue = Queue()
+        self.messageQueue = Queue()
+        self.index = 0 # 图片起始编号，牵涉到计数，不要更改
+        self.promptNum = 10 # 下载几张图片提示一次
+        self.lock = threading.Lock()
+        self.delay = 1.5  # 网络请求太频繁会被封
+        self.QUIT = "QUIT"  # Queue中表示任务结束
+        self.printPrefix = "**" # 用于指定在控制台输出
+
+    def start(self):
+        # 控制台输出线程
+        t = threading.Thread(target=self.__log)
+        t.setDaemon(True)
+        t.start()
+        self.messageQueue.put(self.printPrefix + "脚本开始执行")
+        start_time = dt.now()
+        urls = self.__buildUrls()
+        self.messageQueue.put(self.printPrefix + "已获取 %s 个Json请求网址" % len(urls))
+        # 解析出所有图片网址，该方法会阻塞直到任务完成
+        self.pool.map(self.__resolveImgUrl, urls)
+        while self.queue.qsize():
+            imgs = self.queue.get()
+            self.pool.map_async(self.__downImg, imgs)
+        self.pool.close()
+        self.pool.join()
+        self.messageQueue.put(self.printPrefix + "下载完成！已下载 %s 张图片，总用时 %s" %
+                              (self.index, dt.now() - start_time))
+        self.messageQueue.put(self.printPrefix + "请到 %s 查看结果！" % self.dirpath)
+        self.messageQueue.put(self.printPrefix + "错误信息保存在 %s" % self.errorFile)
+        self.messageQueue.put(self.QUIT)
+
+
+    def __log(self):
+        """控制台输出，加锁以免被多线程打乱"""
+        with open(self.logFile, "w", encoding = "utf-8") as f:
+            while True:
+                message = self.messageQueue.get()
+                if message == self.QUIT:
+                    break
+                message = str(dt.now()) + " " + message
+                if self.printPrefix  in message:
+                    print(message)
+                elif "已下载" in message:
+                    # 下载N张图片提示一次
+                    downNum = self.re_downNum.findall(message)
+                    if downNum and int(downNum[0]) % self.promptNum == 0:
+                        print(message)
+                f.write(message + '\n')
+                f.flush()
+
+    def __getIndex(self):
+        """获取文件编号"""
+        self.lock.acquire()
+        try:
+            return self.index
+        finally:
+            self.index += 1
+            self.lock.release()
+
+    def __buildUrls(self):
+        """json请求网址生成器"""
+        word = urllib.parse.quote(self.word)
+        #url = r"http://pic.sogou.com/pics?query={word}&mode=1&start={pn}&reqType=ajax&reqFrom=result&tn=0"
+        url = r"http://cn.bing.com/images/async?q={word}&first={pn}&count=35&relp=35&lostate=r&mmasync=1&IG=BD3523DBD28B4DA0B59C6217F2C39790&SFX=3&iid=images.5727" 
+        time.sleep(self.delay)
+        maxNum = 100000 
+        urls = [url.format(word=word, pn=x)
+                for x in range(0, maxNum + 1, 35)]
+        print (urls)
+        with open(self.jsonUrlFile, "w", encoding="utf-8") as f:
+            for url in urls:
+                f.write(url + "\n")
+        return urls
+
+    def __resolveImgUrl(self, url):
+        """从指定网页中解析出图片URL"""
+        time.sleep(self.delay)
+        html = self.session.get(url, timeout = 15).text
+        datas = self.re_objURL.findall(html)
+        imgs = []
+        for x in datas:
+            if x.endswith('.jpg'):
+                imgs.append(Image(x))
+        self.messageQueue.put(self.printPrefix + "已解析出 %s 个图片网址" % len(imgs))
+        self.queue.put(imgs)
+
+    def __downImg(self, img):
+        """下载单张图片，传入的是Image对象"""
+        imgUrl = img.url
+        # self.messageQueue.put("线程 %s 正在下载 %s " %
+        #          (threading.current_thread().name, imgUrl))
+        try:
+            time.sleep(self.delay)
+            res = self.session.get(imgUrl, timeout = 15)
+            message = None
+            if str(res.status_code)[0] == "4":
+                message = "\n%s： %s" % (res.status_code, imgUrl)
+            elif "text/html" in res.headers["Content-Type"]:
+                message = "\n无法打开图片： %s" % imgUrl
+        except Exception as e:
+            message = "\n抛出异常： %s\n%s" % (imgUrl, str(e))
+        finally:
+            if message:
+                self.messageQueue.put(message)
+                self.__saveError(message)
+                return
+        index = self.__getIndex()
+        # index从0开始
+        self.messageQueue.put("已下载 %s 张图片：%s" % (index + 1, imgUrl))
+        filename = os.path.join(self.dirpath, str(index) + ".jpg")
+        with open(filename, "wb") as f:
+            f.write(res.content)
+
+    def __saveError(self, message):
+        self.lock.acquire()
+        try:
+            with open(self.errorFile, "a", encoding="utf-8") as f:
+                f.write(message)
+        finally:
+            self.lock.release()
+
+
+class Image(object):
+
+    """图片类，保存图片信息"""
+
+    def __init__(self, url):
+        super(Image, self).__init__()
+        self.url = url
+
+if __name__ == '__main__':
+    print("欢迎使用bing图片下载脚本！\n目前仅支持单个关键词。")
+    print("需要在115行设置maxNum = <下载页数>")
+    print("下载结果保存在脚本目录下的results文件夹中。")
+    print("=" * 50)
+    word = input("请输入你要下载的图片关键词：\n")
+    down = BingImgDownloader(word)
+    down.start()
