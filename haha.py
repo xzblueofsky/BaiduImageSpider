@@ -66,13 +66,39 @@ class BaiduImgDownloader(object):
         'a': '0'
     }
 
-    #re_objURL = re.compile(r'"objURL":"(.*?)".*?"type":"(.*?)"')
-    re_objURL = re.compile(r'"middleURL":"(.*?)".*?"type":"(.*?)"')
+    re_objURL = re.compile(r'"objURL":"(.*?)".*?"type":"(.*?)"')
+    #re_objURL = re.compile(r'"middleURL":"(.*?)".*?"type":"(.*?)"')
     re_downNum = re.compile(r"已下载\s(\d+)\s张图片")
+    """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36",
         "Accept-Encoding": "gzip, deflate, sdch",
     }
+    """
+
+    """
+    headers = { 
+        'Accept': 'ext/plain, */*; q=0.01',
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept-Language': 'en-US,en;q=0.8',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+        'Host':'image.baidu.com',
+        'Referer':'http://image.baidu.com/search/index?tn=baiduimage&ipn=r&ct=201326592&cl=2&lm=-1&st=-1&fm=result&fr=&sf=1&fmq=1492177011886_R&pv=&ic=0&nc=1&z=&se=1&showtab=0&fb=0&width=&height=&face=0&istype=2&ie=utf-8&word=%E6%88%B4%E5%B8%BD%E5%AD%90',
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.116 Safari/537.36'
+    }   
+    """
+
+    headers = { 
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept-Language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4,zh-TW;q=0.2,ru;q=0.2,fr;q=0.2,ja;q=0.2',
+        'Cache-Control': 'max-age=0',
+        'Connection': 'keep-alive',
+	#'Host':'image.baidu.com',
+        'Referer':'http://image.baidu.com/search/index?tn=baiduimage&ipn=r&ct=201326592&cl=2&lm=-1&st=-1&fm=result&fr=&sf=1&fmq=1492177011886_R&pv=&ic=0&nc=1&z=&se=1&showtab=0&fb=0&width=&height=&face=0&istype=2&ie=utf-8&word=%E6%88%B4%E5%B8%BD%E5%AD%90',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36'
+    }   
 
     def __init__(self, word, dirpath=None, processNum=30):
         if " " in word:
@@ -156,7 +182,7 @@ class BaiduImgDownloader(object):
         """
         处理middleURL,不需要解码
         """
-        return url
+        #return url
         """解码图片URL
         解码前：
         ippr_z2C$qAzdH3FAzdH3Ffl_z&e3Bftgwt42_z&e3BvgAzdH3F4omlaAzdH3Faa8W3ZyEpymRmx3Y1p7bb&mla
@@ -176,7 +202,8 @@ class BaiduImgDownloader(object):
         time.sleep(self.delay)
         html = self.session.get(url.format(word=word, pn=0), timeout = 15).content.decode('utf-8')
         results = re.findall(r'"displayNum":(\d+),', html)
-        maxNum = int(results[0]) if results else 0
+        #maxNum = int(results[0]) if results else 0
+        maxNum = 50000 
         urls = [url.format(word=word, pn=x)
                 for x in range(0, maxNum + 1, 60)]
         with open(self.jsonUrlFile, "w", encoding="utf-8") as f:
