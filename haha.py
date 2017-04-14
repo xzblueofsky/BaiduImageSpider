@@ -95,6 +95,7 @@ class BaiduImgDownloader(object):
         'Accept-Language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4,zh-TW;q=0.2,ru;q=0.2,fr;q=0.2,ja;q=0.2',
         'Cache-Control': 'max-age=0',
         'Connection': 'keep-alive',
+        'Cookie': 'BDIMGISLOGIN=0; closedowntip=1; BDqhfp=%E6%88%B4%E5%B8%BD%E5%AD%90%26%260-10-1undefined%26%2622538%26%2611; BAIDUID=D28C2CF187832BA4DCE343439D42C759:FG=1; BIDUPSID=D28C2CF187832BA4DCE343439D42C759; PSTM=1457494826; Hm_lvt_737dbb498415dd39d8abf5bc2404b290=1461897422,1462258230; Hm_lvt_9a586c8b1ad06e7e39bc0e9338305573=1474446375; MCITY=-131%3A40452%3A; firstShowTip=1; BDUSS=2RscFk5a3N3bUd4SmI5T0ZrZTRQTFY4ZTh6SU9JVWtoZFNWckhEemNIcS0tUmRaSVFBQUFBJCQAAAAAAAAAAAEAAADwT5GjREdfcmVsZWFzZTEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAL5s8Fi-bPBYQ; BDRCVFR[feWj1Vr5u3D]=I67x6TjHwwYf0; BDRCVFR[dG2JNJb_ajR]=mk3SLVN4HKm; BDRCVFR[-pGxjrCMryR]=mk3SLVN4HKm; PSINO=1; H_PS_PSSID=22584_1464_13549_21098_22175_22582; BDORZ=B490B5EBF6F3CD402E515D22BCDA1598; indexPageSugList=%5B%22%E6%88%B4%E5%B8%BD%E5%AD%90%22%2C%22%E7%BB%B4%E6%97%8F%22%2C%22%E9%95%BF%E8%80%85%22%2C%22%E7%BF%BB%E8%BD%AC%22%2C%22pingyi%22%2C%22%E4%B8%AD%E5%9B%BD%E4%BA%BA%E8%84%B8%22%2C%22%E4%BA%BA%E8%84%B8%22%2C%22%E8%84%B8%22%2C%22%E4%BA%BA%E8%84%B8%E5%9B%BE%E7%89%87%22%5D; cleanHistoryStatus=0',
 	#'Host':'image.baidu.com',
         'Referer':'http://image.baidu.com/search/index?tn=baiduimage&ipn=r&ct=201326592&cl=2&lm=-1&st=-1&fm=result&fr=&sf=1&fmq=1492177011886_R&pv=&ic=0&nc=1&z=&se=1&showtab=0&fb=0&width=&height=&face=0&istype=2&ie=utf-8&word=%E6%88%B4%E5%B8%BD%E5%AD%90',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/43.0.2357.130 Safari/537.36'
@@ -202,8 +203,8 @@ class BaiduImgDownloader(object):
         time.sleep(self.delay)
         html = self.session.get(url.format(word=word, pn=0), timeout = 15).content.decode('utf-8')
         results = re.findall(r'"displayNum":(\d+),', html)
-        #maxNum = int(results[0]) if results else 0
-        maxNum = 50000 
+        maxNum = int(results[0]) if results else 0
+        #maxNum = 10 
         urls = [url.format(word=word, pn=x)
                 for x in range(0, maxNum + 1, 60)]
         with open(self.jsonUrlFile, "w", encoding="utf-8") as f:
