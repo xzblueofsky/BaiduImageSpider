@@ -66,7 +66,8 @@ class BaiduImgDownloader(object):
         'a': '0'
     }
 
-    re_objURL = re.compile(r'"objURL":"(.*?)".*?"type":"(.*?)"')
+    #re_objURL = re.compile(r'"objURL":"(.*?)".*?"type":"(.*?)"')
+    re_objURL = re.compile(r'"middleURL":"(.*?)".*?"type":"(.*?)"')
     re_downNum = re.compile(r"已下载\s(\d+)\s张图片")
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36",
@@ -152,6 +153,10 @@ class BaiduImgDownloader(object):
             self.lock.release()
 
     def decode(self, url):
+        """
+        处理middleURL,不需要解码
+        """
+        return url
         """解码图片URL
         解码前：
         ippr_z2C$qAzdH3FAzdH3Ffl_z&e3Bftgwt42_z&e3BvgAzdH3F4omlaAzdH3Faa8W3ZyEpymRmx3Y1p7bb&mla
@@ -210,6 +215,9 @@ class BaiduImgDownloader(object):
                 return
         index = self.__getIndex()
         # index从0开始
+        with open('imgurl.txt', 'a') as furl:
+            furl.write('{}\n'.format(imgUrl))
+        furl.close()
         self.messageQueue.put("已下载 %s 张图片：%s" % (index + 1, imgUrl))
         filename = os.path.join(self.dirpath, str(index) + "." + img.type)
         with open(filename, "wb") as f:
